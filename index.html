@@ -1,0 +1,968 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex, nofollow">
+<title>백그라운드 위치 실측기</title>
+<style>*,*::before,*::after{box-sizing:border-box}*{margin:0;padding:0}img,svg,canvas{display:block;max-width:100%}</style>
+</head>
+<body><style>
+  :root {
+    --ground: #F1F4F5;
+    --surface: #FFFFFF;
+    --surface-2: #E5EBED;
+    --line: #D2DBDE;
+    --ink: #0F171A;
+    --muted: #5C6C72;
+    --signal: #0B7A66;
+    --signal-soft: #D6EBE5;
+    --gap: #AF3A1C;
+    --gap-soft: #F6DFD7;
+    --shadow: 0 1px 2px rgba(15,23,26,.05), 0 10px 28px -16px rgba(15,23,26,.28);
+    --sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
+            "Malgun Gothic", "맑은 고딕", "Noto Sans KR", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+            "D2Coding", "Malgun Gothic", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0D1315;
+      --surface: #151E21;
+      --surface-2: #1E2A2E;
+      --line: #2B383D;
+      --ink: #E4EDEF;
+      --muted: #8CA0A6;
+      --signal: #3ECFAE;
+      --signal-soft: #10302A;
+      --gap: #FF7B58;
+      --gap-soft: #3B1E15;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px -16px rgba(0,0,0,.8);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0D1315;
+    --surface: #151E21;
+    --surface-2: #1E2A2E;
+    --line: #2B383D;
+    --ink: #E4EDEF;
+    --muted: #8CA0A6;
+    --signal: #3ECFAE;
+    --signal-soft: #10302A;
+    --gap: #FF7B58;
+    --gap-soft: #3B1E15;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px -16px rgba(0,0,0,.8);
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .wrap {
+    max-width: 34rem;
+    margin: 0 auto;
+    padding: 1.75rem 1.125rem 4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  /* ---------- header ---------- */
+  .eyebrow {
+    font-size: .6875rem;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+  h1 {
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -.022em;
+    text-wrap: balance;
+    margin-top: .3rem;
+  }
+  .lead {
+    color: var(--muted);
+    font-size: .9375rem;
+    margin-top: .5rem;
+  }
+
+  /* ---------- card ---------- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1.125rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: .875rem;
+  }
+  .card-title {
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ---------- steps ---------- */
+  ol.steps {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: .625rem;
+    counter-reset: s;
+  }
+  ol.steps li {
+    counter-increment: s;
+    display: grid;
+    grid-template-columns: 1.5rem 1fr;
+    gap: .625rem;
+    font-size: .9375rem;
+    align-items: start;
+  }
+  ol.steps li::before {
+    content: counter(s);
+    font-family: var(--mono);
+    font-size: .75rem;
+    font-weight: 700;
+    color: var(--signal);
+    background: var(--signal-soft);
+    border-radius: 6px;
+    height: 1.5rem;
+    display: grid;
+    place-items: center;
+  }
+  .scenario {
+    display: flex;
+    flex-direction: column;
+    gap: .375rem;
+    padding: .75rem .875rem;
+    background: var(--surface-2);
+    border-radius: 10px;
+    font-size: .875rem;
+  }
+  .scenario b { font-weight: 700; }
+  .scenario .tag {
+    font-family: var(--mono);
+    font-size: .6875rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    color: var(--muted);
+  }
+
+  /* ---------- primary control ---------- */
+  button {
+    font-family: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 12px;
+  }
+  button:focus-visible {
+    outline: 2px solid var(--signal);
+    outline-offset: 3px;
+  }
+  #startBtn {
+    width: 100%;
+    padding: 1.05rem 1rem;
+    font-size: 1.0625rem;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    background: var(--signal);
+    color: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  #startBtn[data-state="running"] {
+    background: var(--gap);
+  }
+  #startBtn:disabled { opacity: .45; cursor: not-allowed; }
+
+  .ghost-btn {
+    padding: .625rem .875rem;
+    background: transparent;
+    border-color: var(--line);
+    color: var(--ink);
+    font-size: .8125rem;
+    font-weight: 600;
+  }
+
+  /* ---------- live status ---------- */
+  .status-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .75rem;
+    font-weight: 700;
+    padding: .28rem .6rem;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--muted);
+  }
+  .pill .dot {
+    width: .5rem; height: .5rem;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .pill[data-tone="live"] { background: var(--signal-soft); color: var(--signal); }
+  .pill[data-tone="lost"] { background: var(--gap-soft); color: var(--gap); }
+  .pill[data-tone="live"] .dot { animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .25; } }
+  @media (prefers-reduced-motion: reduce) {
+    .pill[data-tone="live"] .dot { animation: none; }
+  }
+  .device {
+    font-family: var(--mono);
+    font-size: .6875rem;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  .big {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 3.25rem;
+    font-weight: 700;
+    letter-spacing: -.04em;
+    line-height: 1;
+    color: var(--signal);
+  }
+  .big[data-tone="lost"] { color: var(--gap); }
+  .big .unit { font-size: 1.125rem; font-weight: 600; letter-spacing: 0; }
+  .big-label {
+    font-size: .8125rem;
+    color: var(--muted);
+    margin-top: .3rem;
+  }
+
+  /* ---------- timeline ---------- */
+  #strip {
+    width: 100%;
+    height: 76px;
+    display: block;
+    border-radius: 10px;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .875rem;
+    font-size: .75rem;
+    color: var(--muted);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: .375rem; }
+  .swatch { width: .8rem; height: .8rem; border-radius: 3px; }
+
+  /* ---------- stats ---------- */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  .stat {
+    background: var(--surface);
+    padding: .8rem .875rem;
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+  }
+  .stat dt {
+    font-size: .75rem;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .stat dd {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 1.375rem;
+    font-weight: 700;
+    letter-spacing: -.02em;
+  }
+  .stat dd .unit { font-size: .8125rem; font-weight: 600; color: var(--muted); }
+  .stat[data-tone="lost"] dd { color: var(--gap); }
+
+  .verdict {
+    padding: .875rem 1rem;
+    border-radius: 12px;
+    font-size: .9375rem;
+    font-weight: 600;
+    background: var(--surface-2);
+    color: var(--muted);
+  }
+  .verdict[data-tone="lost"] { background: var(--gap-soft); color: var(--gap); }
+  .verdict[data-tone="ok"] { background: var(--signal-soft); color: var(--signal); }
+
+  /* ---------- log ---------- */
+  #log {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    max-height: 21rem;
+    overflow-y: auto;
+    font-family: var(--mono);
+    font-size: .75rem;
+    line-height: 1.5;
+  }
+  #log li {
+    display: grid;
+    grid-template-columns: 5.2rem 1fr;
+    gap: .5rem;
+    padding: .35rem 0;
+    border-bottom: 1px solid var(--line);
+    word-break: break-word;
+  }
+  #log li:last-child { border-bottom: 0; }
+  #log time { color: var(--muted); font-variant-numeric: tabular-nums; }
+  #log li[data-kind="gap"] { color: var(--gap); font-weight: 700; }
+  #log li[data-kind="freeze"] { color: var(--gap); font-weight: 700; }
+  #log li[data-kind="vis"] { font-weight: 700; }
+  #log li[data-kind="fix"] { color: var(--muted); }
+  #log .empty { color: var(--muted); padding: .5rem 0; }
+
+  .note {
+    font-size: .75rem;
+    color: var(--muted);
+    line-height: 1.65;
+  }
+  .row { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+  /* ---------- diagnostics ---------- */
+  dl.diag {
+    display: flex;
+    flex-direction: column;
+    font-size: .8125rem;
+  }
+  dl.diag > div {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: .75rem;
+    align-items: baseline;
+    padding: .45rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  dl.diag > div:last-child { border-bottom: 0; }
+  dl.diag dt { color: var(--muted); }
+  dl.diag dd {
+    font-family: var(--mono);
+    font-size: .75rem;
+    font-weight: 700;
+    text-align: right;
+  }
+  dl.diag dd[data-tone="ok"] { color: var(--signal); }
+  dl.diag dd[data-tone="bad"] { color: var(--gap); }
+  dl.diag dd[data-tone="warn"] { color: var(--gap); }
+  .alert {
+    padding: .875rem 1rem;
+    border-radius: 12px;
+    background: var(--gap-soft);
+    color: var(--gap);
+    font-size: .875rem;
+    font-weight: 600;
+  }
+  .alert:empty { display: none; }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">모바일 웹 · 백그라운드 위치 진단</div>
+    <h1>백그라운드 위치 실측기</h1>
+    <p class="lead">
+      모바일 웹이 <b>화면이 꺼지거나 다른 앱으로 전환된 동안</b>에도 위치를 계속 보낼 수 있는지
+      이 기기에서 직접 측정합니다. 측정이 끝나면 타임라인에 끊긴 구간이 그대로 남습니다.
+    </p>
+  </header>
+
+  <div class="alert" id="alert"></div>
+
+  <section class="card">
+    <div class="card-title">사전 진단</div>
+    <dl class="diag" id="diag"></dl>
+    <div class="row">
+      <button class="ghost-btn" id="permBtn">위치 권한만 먼저 확인</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-title">측정 방법</div>
+    <ol class="steps">
+      <li>아래 <b>측정 시작</b>을 누르고 위치 권한을 <b>허용</b>합니다. (정확도 높음 권장)</li>
+      <li>10초쯤 그대로 두어 정상 수신되는 것을 확인합니다.</li>
+      <li>아래 두 시나리오 중 하나를 <b>2분</b> 동안 실행합니다.</li>
+      <li>돌아와서 <b>측정 정지</b>를 누르고 타임라인과 요약을 확인합니다.</li>
+    </ol>
+    <div class="scenario">
+      <span class="tag">시나리오 A — 화면 끄기</span>
+      <span>전원 버튼을 눌러 화면을 끄고 2분 대기합니다. 기사가 폰을 주머니에 넣은 상황.</span>
+    </div>
+    <div class="scenario">
+      <span class="tag">시나리오 B — 앱 전환</span>
+      <span>화면은 켜둔 채 <b>티맵·네이버지도 등 내비를 띄우고</b> 2분 대기합니다. 실제 운행 상황에 가장 가깝습니다.</span>
+    </div>
+  </section>
+
+  <button id="startBtn" data-state="idle">측정 시작</button>
+
+  <section class="card">
+    <div class="status-head">
+      <span class="pill" id="pill" data-tone="idle"><span class="dot"></span><span id="pillText">대기 중</span></span>
+      <span class="device" id="device"></span>
+    </div>
+    <div>
+      <div class="big" id="sinceLast">—<span class="unit">초</span></div>
+      <div class="big-label">마지막 위치 수신 이후 경과</div>
+    </div>
+    <canvas id="strip"></canvas>
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--signal)"></span>위치 수신 중</span>
+      <span><span class="swatch" style="background:var(--gap)"></span>신호 끊김 (5초 이상)</span>
+      <span><span class="swatch" style="background:var(--muted)"></span>화면 꺼짐 / 앱 전환</span>
+    </div>
+  </section>
+
+  <dl class="stats">
+    <div class="stat"><dt>측정 시간</dt><dd id="sTotal">0<span class="unit">초</span></dd></div>
+    <div class="stat"><dt>위치 수신 횟수</dt><dd id="sFixes">0<span class="unit">회</span></dd></div>
+    <div class="stat" data-tone="lost"><dt>최장 끊김</dt><dd id="sMax">0<span class="unit">초</span></dd></div>
+    <div class="stat" data-tone="lost"><dt>위치 유실 시간</dt><dd id="sLoss">0<span class="unit">초</span></dd></div>
+  </dl>
+
+  <div class="verdict" id="verdict">측정을 시작하면 결과가 여기에 표시됩니다.</div>
+
+  <section class="card">
+    <div class="card-title">이벤트 로그</div>
+    <ul id="log"><li class="empty">아직 기록 없음</li></ul>
+    <div class="row">
+      <button class="ghost-btn" id="copyBtn">결과 복사</button>
+      <button class="ghost-btn" id="resetBtn">초기화</button>
+    </div>
+  </section>
+
+  <p class="note">
+    위치 데이터는 이 기기 밖으로 전송되지 않습니다. 브라우저 안에서만 계산하며 서버로 보내는 통신은 없습니다.<br>
+    끊김 판정 기준은 <b>5초</b>입니다. 정상 수신 시 위치는 보통 1초 내외 간격으로 들어옵니다.<br>
+    <b>JS 정지</b>는 위치뿐 아니라 브라우저의 스크립트 실행 자체가 멈춘 것으로, 백그라운드에서
+    어떤 우회 코드도 동작할 수 없었다는 뜻입니다.
+  </p>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var GAP_MS = 5000;
+  var FREEZE_MS = 2000;
+
+  var state = {
+    running: false,
+    startT: 0,
+    stopT: 0,
+    fixes: [],      // {t, lat, lon, acc}
+    marks: [],      // {t, kind, text}
+    lastTick: 0,
+    watchId: null
+  };
+
+  var el = {
+    start: document.getElementById("startBtn"),
+    copy: document.getElementById("copyBtn"),
+    reset: document.getElementById("resetBtn"),
+    pill: document.getElementById("pill"),
+    pillText: document.getElementById("pillText"),
+    device: document.getElementById("device"),
+    since: document.getElementById("sinceLast"),
+    strip: document.getElementById("strip"),
+    log: document.getElementById("log"),
+    alert: document.getElementById("alert"),
+    verdict: document.getElementById("verdict"),
+    sTotal: document.getElementById("sTotal"),
+    sFixes: document.getElementById("sFixes"),
+    sMax: document.getElementById("sMax"),
+    sLoss: document.getElementById("sLoss")
+  };
+
+  /* ---------- device label ---------- */
+  function deviceLabel() {
+    var ua = navigator.userAgent, os = "OS 미상", br = "브라우저 미상", m;
+    if ((m = ua.match(/iPhone OS ([\d_]+)/))) os = "iOS " + m[1].replace(/_/g, ".");
+    else if ((m = ua.match(/CPU OS ([\d_]+)/))) os = "iPadOS " + m[1].replace(/_/g, ".");
+    else if ((m = ua.match(/Android ([\d.]+)/))) os = "Android " + m[1];
+    else if (/Macintosh/.test(ua)) os = navigator.maxTouchPoints > 1 ? "iPadOS" : "macOS";
+    else if (/Windows/.test(ua)) os = "Windows";
+
+    if (/CriOS/.test(ua)) br = "Chrome(iOS)";
+    else if (/FxiOS/.test(ua)) br = "Firefox(iOS)";
+    else if (/EdgiOS/.test(ua)) br = "Edge(iOS)";
+    else if (/Whale/.test(ua)) br = "Whale";
+    else if (/SamsungBrowser/.test(ua)) br = "Samsung Internet";
+    else if (/Edg\//.test(ua)) br = "Edge";
+    else if (/Chrome\//.test(ua)) br = "Chrome";
+    else if (/Safari\//.test(ua)) br = "Safari";
+
+    var standalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches)
+      || navigator.standalone === true;
+    return os + " · " + br + (standalone ? " · 홈화면 앱" : "");
+  }
+  el.device.textContent = deviceLabel();
+
+  /* ---------- diagnostics ---------- */
+  var inIframe = false;
+  try { inIframe = window.self !== window.top; } catch (e) { inIframe = true; }
+
+  var diagEl = document.getElementById("diag");
+  var permBtn = document.getElementById("permBtn");
+
+  function diagRow(label, value, tone) {
+    var d = document.createElement("div");
+    var dt = document.createElement("dt");
+    var dd = document.createElement("dd");
+    dt.textContent = label;
+    dd.textContent = value;
+    if (tone) dd.setAttribute("data-tone", tone);
+    d.appendChild(dt); d.appendChild(dd);
+    return d;
+  }
+
+  function runDiag() {
+    diagEl.innerHTML = "";
+    diagEl.appendChild(diagRow("실행 위치",
+      inIframe ? "iframe 안 (위치 차단 가능)" : "최상위 창",
+      inIframe ? "bad" : "ok"));
+    diagEl.appendChild(diagRow("HTTPS 보안 컨텍스트",
+      window.isSecureContext ? "정상" : "아님 — 위치 사용 불가",
+      window.isSecureContext ? "ok" : "bad"));
+    diagEl.appendChild(diagRow("Geolocation API",
+      ("geolocation" in navigator) ? "사용 가능" : "없음",
+      ("geolocation" in navigator) ? "ok" : "bad"));
+
+    var permRow = diagRow("위치 권한 상태", "확인 중…", null);
+    diagEl.appendChild(permRow);
+    var permDd = permRow.querySelector("dd");
+
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: "geolocation" }).then(function (res) {
+        var map = {
+          granted: ["허용됨", "ok"],
+          denied: ["거부됨 — 재설정 필요", "bad"],
+          prompt: ["아직 안 물어봄", null]
+        };
+        var v = map[res.state] || [res.state, null];
+        permDd.textContent = v[0];
+        if (v[1]) permDd.setAttribute("data-tone", v[1]);
+        if (res.state === "denied") showDeniedHelp();
+      }, function () {
+        permDd.textContent = "조회 미지원";
+      });
+    } else {
+      permDd.textContent = "조회 미지원 (버튼으로 확인)";
+    }
+
+    if (inIframe) {
+      el.alert.textContent = "이 페이지가 iframe 안에서 실행 중입니다. "
+        + "이 상태에서는 브라우저가 위치 권한을 아예 차단할 수 있습니다. "
+        + "페이지를 새 탭에서 직접 열어 다시 시도해 주세요.";
+    }
+  }
+
+  function showDeniedHelp() {
+    el.alert.textContent = "위치 권한이 '거부' 상태로 저장돼 있어 팝업이 뜨지 않습니다. "
+      + "iPhone: 설정 → Safari → 아래 '위치' 항목 → '묻기'로 변경, "
+      + "또는 설정 → 개인정보 보호 및 보안 → 위치 서비스 → Safari 웹사이트 → '앱을 사용하는 동안' 선택 후 다시 시도하세요.";
+  }
+
+  permBtn.addEventListener("click", function () {
+    permBtn.textContent = "확인 중…";
+    var t0 = Date.now();
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      permBtn.textContent = "위치 권한만 먼저 확인";
+      el.alert.textContent = "";
+      addMark("fix", "권한 확인 성공 · 정확도 ±" + Math.round(pos.coords.accuracy) + "m — 이제 측정 시작을 누르세요");
+      runDiag();
+    }, function (err) {
+      permBtn.textContent = "위치 권한만 먼저 확인";
+      var instant = (Date.now() - t0) < 700;
+      if (err.code === 1 && instant && inIframe) {
+        el.alert.textContent = "팝업 없이 즉시 거부되었고 이 페이지는 iframe 안에 있습니다. "
+          + "iframe 차단이 원인일 가능성이 높습니다 — 새 탭에서 직접 열어 다시 시도하세요.";
+      } else if (err.code === 1 && instant) {
+        showDeniedHelp();
+      } else if (err.code === 1) {
+        el.alert.textContent = "위치 권한을 '허용 안 함'으로 선택했습니다. 다시 눌러 허용해 주세요.";
+      } else {
+        el.alert.textContent = "위치 오류 (" + err.code + ") " + err.message;
+      }
+      addMark("gap", "권한 확인 실패 — " + el.alert.textContent);
+    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+  });
+
+  /* ---------- helpers ---------- */
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function clockOf(t) {
+    var d = new Date(t);
+    return pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+  }
+  function secs(ms, digits) {
+    return (ms / 1000).toFixed(digits === undefined ? 1 : digits);
+  }
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function addMark(kind, text) {
+    state.marks.push({ t: Date.now(), kind: kind, text: text });
+    renderLog();
+  }
+
+  /* ---------- stats ---------- */
+  function computeStats() {
+    var now = state.running ? Date.now() : (state.stopT || Date.now());
+    var total = state.startT ? now - state.startT : 0;
+    var maxGap = 0, loss = 0;
+    var pts = state.fixes;
+
+    // interval from start to first fix also counts as no-signal time
+    var prev = state.startT;
+    for (var i = 0; i < pts.length; i++) {
+      var dt = pts[i].t - prev;
+      if (dt > GAP_MS) { loss += dt; if (dt > maxGap) maxGap = dt; }
+      prev = pts[i].t;
+    }
+    var tail = now - prev;
+    if (state.startT && tail > GAP_MS) { loss += tail; if (tail > maxGap) maxGap = tail; }
+
+    return { now: now, total: total, maxGap: maxGap, loss: loss, ratio: total > 0 ? loss / total : 0 };
+  }
+
+  /* ---------- timeline ---------- */
+  function drawStrip() {
+    var c = el.strip;
+    var dpr = window.devicePixelRatio || 1;
+    var w = c.clientWidth, h = c.clientHeight;
+    if (!w || !h) return;
+    if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
+      c.width = Math.round(w * dpr);
+      c.height = Math.round(h * dpr);
+    }
+    var g = c.getContext("2d");
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+
+    var colSurface2 = cssVar("--surface-2");
+    var colSignal = cssVar("--signal");
+    var colGap = cssVar("--gap");
+    var colMuted = cssVar("--muted");
+
+    var barY = 16, barH = 40;
+
+    if (!state.startT) {
+      g.fillStyle = colSurface2;
+      roundRect(g, 0, barY, w, barH, 8); g.fill();
+      g.fillStyle = colMuted;
+      g.font = "500 11px " + cssVar("--mono");
+      g.textBaseline = "middle";
+      g.fillText("측정 시작 전", 10, barY + barH / 2);
+      return;
+    }
+
+    var st = computeStats();
+    var span = Math.max(st.total, 1000);
+    function x(t) { return Math.max(0, Math.min(w, ((t - state.startT) / span) * w)); }
+
+    // base = 신호 없음
+    g.fillStyle = colGap;
+    roundRect(g, 0, barY, w, barH, 8); g.fill();
+
+    // 정상 수신 구간 덧칠
+    g.save();
+    roundRect(g, 0, barY, w, barH, 8); g.clip();
+    g.fillStyle = colSignal;
+    var prev = state.startT;
+    for (var i = 0; i < state.fixes.length; i++) {
+      var t = state.fixes[i].t;
+      if (t - prev <= GAP_MS) g.fillRect(x(prev), barY, Math.max(1, x(t) - x(prev)), barH);
+      prev = t;
+    }
+    if (st.now - prev <= GAP_MS) g.fillRect(x(prev), barY, Math.max(1, x(st.now) - x(prev)), barH);
+
+    // 화면 꺼짐 / 앱 전환 마커
+    g.fillStyle = colMuted;
+    for (var j = 0; j < state.marks.length; j++) {
+      if (state.marks[j].kind !== "vis") continue;
+      g.fillRect(x(state.marks[j].t) - 1, barY, 2, barH);
+    }
+    g.restore();
+
+    // 축 라벨
+    g.fillStyle = colMuted;
+    g.font = "500 10px " + cssVar("--mono");
+    g.textBaseline = "top";
+    g.fillText("0초", 0, barY + barH + 6);
+    var right = secs(st.total, 0) + "초";
+    g.textAlign = "right";
+    g.fillText(right, w, barY + barH + 6);
+    g.textAlign = "left";
+  }
+
+  function roundRect(g, x, y, w, h, r) {
+    g.beginPath();
+    g.moveTo(x + r, y);
+    g.arcTo(x + w, y, x + w, y + h, r);
+    g.arcTo(x + w, y + h, x, y + h, r);
+    g.arcTo(x, y + h, x, y, r);
+    g.arcTo(x, y, x + w, y, r);
+    g.closePath();
+  }
+
+  /* ---------- render ---------- */
+  function renderStats() {
+    var st = computeStats();
+    el.sTotal.innerHTML = secs(st.total, 0) + '<span class="unit">초</span>';
+    el.sFixes.innerHTML = state.fixes.length + '<span class="unit">회</span>';
+    el.sMax.innerHTML = secs(st.maxGap, 1) + '<span class="unit">초</span>';
+    el.sLoss.innerHTML = secs(st.loss, 1) + '<span class="unit">초</span>';
+
+    var last = state.fixes.length ? state.fixes[state.fixes.length - 1].t : state.startT;
+    var since = state.startT ? st.now - last : null;
+    if (since === null) {
+      el.since.innerHTML = '—<span class="unit">초</span>';
+      el.since.removeAttribute("data-tone");
+    } else {
+      el.since.innerHTML = secs(since, 1) + '<span class="unit">초</span>';
+      el.since.setAttribute("data-tone", since > GAP_MS ? "lost" : "ok");
+    }
+
+    if (state.running) {
+      var lost = since !== null && since > GAP_MS;
+      el.pill.setAttribute("data-tone", lost ? "lost" : "live");
+      el.pillText.textContent = lost ? "신호 끊김" : "측정 중";
+    }
+
+    if (!state.startT) {
+      el.verdict.removeAttribute("data-tone");
+      el.verdict.textContent = "측정을 시작하면 결과가 여기에 표시됩니다.";
+    } else if (state.fixes.length === 0 && st.total > 8000) {
+      el.verdict.setAttribute("data-tone", "lost");
+      el.verdict.textContent = "⚠ 측정 실패 — 위치를 한 번도 받지 못했습니다. "
+        + "이것은 백그라운드 차단이 아니라 권한·환경 문제이며, 위 숫자는 근거로 쓸 수 없습니다. "
+        + "사전 진단을 확인하고 다시 시도하세요.";
+    } else if (st.total < 20000) {
+      el.verdict.removeAttribute("data-tone");
+      el.verdict.textContent = "측정 중입니다. 화면을 끄거나 다른 앱으로 전환해 보세요.";
+    } else if (st.maxGap > GAP_MS) {
+      el.verdict.setAttribute("data-tone", "lost");
+      el.verdict.textContent = "백그라운드에서 위치 전송이 끊겼습니다. 전체 " + secs(st.total, 0)
+        + "초 중 " + secs(st.loss, 0) + "초(" + Math.round(st.ratio * 100)
+        + "%) 동안 위치를 받지 못했고, 최장 " + secs(st.maxGap, 0) + "초 연속 끊겼습니다.";
+    } else {
+      el.verdict.setAttribute("data-tone", "ok");
+      el.verdict.textContent = "이 조건에서는 끊김이 없었습니다. 화면을 끄거나 다른 앱을 띄운 채로 다시 측정해 보세요.";
+    }
+
+    drawStrip();
+  }
+
+  function renderLog() {
+    var items = [];
+    for (var i = 0; i < state.marks.length; i++) items.push(state.marks[i]);
+    items.reverse();
+    if (!items.length) {
+      el.log.innerHTML = '<li class="empty">아직 기록 없음</li>';
+      return;
+    }
+    var html = "";
+    for (var j = 0; j < items.length && j < 300; j++) {
+      var m = items[j];
+      html += '<li data-kind="' + m.kind + '"><time>' + clockOf(m.t) + "</time><span>"
+            + escapeHtml(m.text) + "</span></li>";
+    }
+    el.log.innerHTML = html;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  /* ---------- geolocation ---------- */
+  function onPosition(pos) {
+    var t = Date.now();
+    var prev = state.fixes.length ? state.fixes[state.fixes.length - 1].t : state.startT;
+    var dt = t - prev;
+    state.fixes.push({
+      t: t,
+      lat: pos.coords.latitude,
+      lon: pos.coords.longitude,
+      acc: pos.coords.accuracy
+    });
+    if (dt > GAP_MS) {
+      addMark("gap", "위치 수신 재개 — " + secs(dt, 1) + "초 동안 끊겼음");
+    } else if (state.fixes.length === 1) {
+      addMark("fix", "첫 위치 수신 · 정확도 ±" + Math.round(pos.coords.accuracy) + "m");
+    }
+    renderStats();
+  }
+
+  function onPosError(err) {
+    var msg = "위치 오류 (" + err.code + ") " + err.message;
+    if (err.code === 1) {
+      msg = inIframe
+        ? "위치 권한이 차단되었습니다. 이 페이지가 iframe 안에서 실행 중이라 브라우저가 막았을 가능성이 높습니다 — 새 탭에서 직접 열어 다시 시도하세요."
+        : "위치 권한이 거부되었습니다. 설정에서 이 사이트의 위치 권한을 '묻기' 또는 '허용'으로 바꾼 뒤 다시 시도하세요.";
+    } else if (err.code === 2) {
+      msg = "위치를 확인할 수 없습니다 (신호 없음).";
+    } else if (err.code === 3) {
+      msg = "위치 요청 시간 초과.";
+    }
+    addMark("gap", msg);
+    el.alert.textContent = msg;
+  }
+
+  /* ---------- lifecycle ---------- */
+  function start() {
+    if (!("geolocation" in navigator)) {
+      el.alert.textContent = "이 브라우저는 위치 기능(Geolocation)을 지원하지 않습니다.";
+      return;
+    }
+    if (!window.isSecureContext) {
+      el.alert.textContent = "HTTPS 환경에서만 위치를 측정할 수 있습니다.";
+      return;
+    }
+    el.alert.textContent = "";
+    state.running = true;
+    state.startT = Date.now();
+    state.stopT = 0;
+    state.lastTick = Date.now();
+    state.fixes = [];
+    state.marks = [];
+    addMark("vis", "측정 시작 · " + deviceLabel());
+
+    state.watchId = navigator.geolocation.watchPosition(onPosition, onPosError, {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 30000
+    });
+
+    el.start.textContent = "측정 정지";
+    el.start.setAttribute("data-state", "running");
+    el.pill.setAttribute("data-tone", "live");
+    el.pillText.textContent = "측정 중";
+    renderStats();
+  }
+
+  function stop() {
+    if (state.watchId !== null) {
+      navigator.geolocation.clearWatch(state.watchId);
+      state.watchId = null;
+    }
+    state.running = false;
+    state.stopT = Date.now();
+    addMark("vis", "측정 정지");
+    el.start.textContent = "다시 측정";
+    el.start.setAttribute("data-state", "idle");
+    el.pill.setAttribute("data-tone", "idle");
+    el.pillText.textContent = "정지됨";
+    renderStats();
+  }
+
+  el.start.addEventListener("click", function () {
+    if (state.running) stop(); else start();
+  });
+
+  el.reset.addEventListener("click", function () {
+    if (state.running) stop();
+    state.startT = 0; state.stopT = 0; state.fixes = []; state.marks = [];
+    el.alert.textContent = "";
+    el.pill.setAttribute("data-tone", "idle");
+    el.pillText.textContent = "대기 중";
+    el.start.textContent = "측정 시작";
+    renderLog();
+    renderStats();
+  });
+
+  el.copy.addEventListener("click", function () {
+    var st = computeStats();
+    var lines = [];
+    lines.push("[백그라운드 위치 실측 결과]");
+    if (state.startT && state.fixes.length === 0) {
+      lines.push("*** 측정 실패 — 위치 수신 0회. 권한/환경 문제이며 근거로 사용 불가 ***");
+    }
+    lines.push("기기: " + deviceLabel());
+    lines.push("실행 위치: " + (inIframe ? "iframe 안" : "최상위 창"));
+    lines.push("측정 시간: " + secs(st.total, 0) + "초");
+    lines.push("위치 수신 횟수: " + state.fixes.length + "회");
+    lines.push("최장 끊김: " + secs(st.maxGap, 1) + "초");
+    lines.push("위치 유실 시간: " + secs(st.loss, 1) + "초 (" + Math.round(st.ratio * 100) + "%)");
+    lines.push("끊김 판정 기준: " + (GAP_MS / 1000) + "초");
+    lines.push("");
+    lines.push("[이벤트]");
+    for (var i = 0; i < state.marks.length; i++) {
+      lines.push(clockOf(state.marks[i].t) + "  " + state.marks[i].text);
+    }
+    var text = lines.join("\n");
+    var done = function () { el.copy.textContent = "복사됨"; setTimeout(function () { el.copy.textContent = "결과 복사"; }, 1600); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { window.prompt("아래 내용을 복사하세요", text); });
+    } else {
+      window.prompt("아래 내용을 복사하세요", text);
+    }
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    if (!state.running) return;
+    addMark("vis", document.hidden ? "화면 꺼짐 / 다른 앱으로 전환됨" : "화면 복귀");
+    if (!document.hidden) renderStats();
+  });
+
+  window.addEventListener("pagehide", function () {
+    if (state.running) addMark("vis", "페이지 백그라운드 진입 (pagehide)");
+  });
+
+  /* heartbeat: JS 자체가 멈췄는지 감지 */
+  setInterval(function () {
+    var now = Date.now();
+    if (state.running) {
+      var late = now - state.lastTick;
+      if (late > FREEZE_MS) {
+        addMark("freeze", "JS 실행 정지 감지 — " + secs(late, 1) + "초 동안 스크립트가 멈춰 있었음");
+      }
+      state.lastTick = now;
+      renderStats();
+    }
+  }, 250);
+
+  window.addEventListener("resize", drawStrip);
+  if (window.matchMedia) {
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    if (mq.addEventListener) mq.addEventListener("change", drawStrip);
+  }
+
+  runDiag();
+  renderLog();
+  renderStats();
+})();
+</script>
+
+</body>
+</html>
+
