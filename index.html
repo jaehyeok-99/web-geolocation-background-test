@@ -123,23 +123,27 @@
     gap: .625rem;
     counter-reset: s;
   }
+  /* 번호는 절대 위치로 빼고 본문은 인라인으로 흐르게 둔다.
+     li 를 grid 로 만들면 본문 안의 <b> 가 각각 별개 칸으로 잡혀 레이아웃이 깨진다. */
   ol.steps li {
     counter-increment: s;
-    display: grid;
-    grid-template-columns: 1.5rem 1fr;
-    gap: .625rem;
+    position: relative;
+    padding-left: 2.125rem;
     font-size: .9375rem;
-    align-items: start;
   }
   ol.steps li::before {
     content: counter(s);
+    position: absolute;
+    left: 0;
+    top: .18rem;
+    width: 1.5rem;
+    height: 1.5rem;
     font-family: var(--mono);
     font-size: .75rem;
     font-weight: 700;
     color: var(--signal);
     background: var(--signal-soft);
     border-radius: 6px;
-    height: 1.5rem;
     display: grid;
     place-items: center;
   }
