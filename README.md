@@ -26,11 +26,16 @@
 
 사전 진단 → 측정 안내 → 시작 버튼 → 타임라인·통계 → 이벤트 로그 순서로 구성되어 있습니다.
 
+<details>
+<summary>실행 화면 펼쳐보기</summary>
+
 <p align="center">
   <img src="./docs/images/screen-idle.png" alt="위치 실측기의 실제 실행 화면: 사전 진단, 측정 방법, 대기 상태의 타임라인과 통계, 이벤트 로그" width="360">
 </p>
 
 [원본 크기로 보기](./docs/images/screen-idle.png)
+
+</details>
 
 ## 측정 방법
 
