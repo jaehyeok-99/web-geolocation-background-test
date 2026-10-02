@@ -12,6 +12,46 @@
 - 타이머 지연 감지와 이벤트 로그
 - 측정 결과를 텍스트로 복사
 
+## 아키텍처
+
+[ index.html ](./index.html) 하나에서 위치 수신, 페이지 가시성, 타이머 지연을 기록하고 통계와 화면을 갱신합니다.
+
+```mermaid
+flowchart TB
+    hosting["정적 호스팅 · HTTPS<br/>index.html 제공"]
+    subgraph device["사용자 기기 · 모바일 브라우저"]
+        direction TB
+        gps["Geolocation API<br/>watchPosition"]
+        visibility["페이지 가시성<br/>visibilitychange"]
+        timer["타이머 · 250ms<br/>실행 지연 감지"]
+        state[("페이지 메모리<br/>위치 수신·가시성·이벤트 기록")]
+        stats["구간별 통계 계산<br/>수신 횟수·최장 공백"]
+        ui["측정 화면<br/>Canvas 타임라인·통계·로그"]
+        clipboard["클립보드<br/>통계·이벤트 텍스트"]
+        gps -->|"수신 시각·좌표·정확도"| state
+        visibility -->|"전경·백그라운드 전환"| state
+        timer -->|"지연 이벤트"| state
+        state --> stats
+        stats --> ui
+        state -->|"이벤트 로그"| ui
+        stats -->|"결과 복사"| clipboard
+        state -->|"이벤트 목록"| clipboard
+    end
+
+    hosting -->|"페이지 로드"| ui
+
+    classDef source fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
+    classDef storage fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef process fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    classDef output fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    class hosting,gps,visibility,timer source
+    class state storage
+    class stats process
+    class ui,clipboard output
+```
+
+호스팅은 페이지를 제공하는 역할이며 위치를 수집하는 서버 API는 없습니다. 측정 기록은 페이지 메모리에 남고, 결과 복사에는 좌표 자체를 포함하지 않습니다. 그림의 구성 요소는 한 HTML 파일 안의 역할을 나눈 것으로 별도 서비스가 아닙니다.
+
 ## 측정 방법
 
 1. 모바일 브라우저에서 HTTPS로 제공되는 페이지를 **직접** 엽니다.
